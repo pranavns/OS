@@ -1,3 +1,32 @@
+//cigerette smokers problem
+
+/*
+Assume a cigarette requires three ingredients to smoke:
+    Tobacco
+    Smoking Paper
+    A match
+Assume there are also three chain smokers around a table,
+each of whom has an infinite supply of one of the three ingredients;
+one smoker has an infinite supply of tobacco,
+another has an infinite supply of paper,
+and the third has an infinite supply of matches.
+Assume there is also a non-smoking arbiter. 
+The arbiter enables the smokers to make their cigarettes 
+by arbitrarily (non deterministically) selecting two of the smokers,
+taking one item out of each of their supplies,
+and placing the items on the table.
+He then notifies the third smoker that he has done this.
+The third smoker removes the two items from the table 
+and uses them (along with his own supply) to make a cigarette,
+which he smokes for a while. Meanwhile, the arbiter, seeing the table empty,
+again chooses two smokers at random and places their items on the table.
+This process continues forever.
+The smokers do not hoard items from the table; 
+a smoker only begins to roll a new cigarette once he is finished smoking the last one.
+If the arbiter places tobacco and paper on the table while the match man is smoking,
+the tobacco and paper will remain untouched on the table until the match
+man is finished with his cigarette and collects them.
+*/
 
 #include <stdio.h>
 #include <string.h>
