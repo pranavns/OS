@@ -1,105 +1,100 @@
 //Dining Philosophers Problem
 
-/*Five silent philosophers sit at a table around a bowl of spaghetti.
-A fork is placed between each pair of adjacent philosophers.
-Each philosopher must alternately think and eat.
-However, a philosopher can only eat spaghetti when he has both left and right forks.
-Each fork can be held by only one philosopher and so a philosopher can use the fork
-only if it's not being used by another philosopher.
-After he finishes eating, he needs to put down both the forks so they become available to others.
-A philosopher can grab the fork on his right or the one on his left as they become available,
-but can't start eating before getting both of them.
-Eating is not limited by the amount of spaghetti left: assume an infinite supply.
-An alternative problem formulation uses rice and chopsticks instead of spaghetti and forks.
-The problem is how to design a discipline of behavior (a concurrent algorithm) such that
-each philosopher won't starve, i.e. can forever continue to alternate between eating and thinking,
-assuming that any philosopher can not know when others may want to eat or think.
-*/
-import java.util.Random;
+/*
+	5 Philosophers are given one table to sit and there are
+	5 plates full of food to eat. And in between the 2 consecutive
+	plates one forks are provided. So total forks are five.
+	philosopher may be in 3 states... thinking, eating, and waiting
+	for the fork.
+	The problem is two consecutive phils cannot be eat simultaneouly 
+	but the next Phil can wait until the eating is completed...
+	the philosophers wants to eat and think at equal interval of time
 
-class Monitor {
-	int phil_States[] = new int[5]; // 0=not_waiting, 1=waiting, 2=eating
-    	boolean fork_States[] = new boolean[5]; // false = in use, true = free
-	Monitor() { // constructor
+*/ 
+
+import java.io.*;
+
+class lock{}	//this is not necessary since Table's object also performs monitor lock
+
+class Table extends Thread {
+	int phil_States[] = new int[5]; 	// 0=thinking, 1=waiting, 2=eating
+    	boolean fork_States[] = new boolean[5]; // forks:- false = in use, true = free
+	lock L = new lock();			//dummy class object to acts as monitor-lock
+	Table() {
  		for(int i=0;i<5;i++) {
-    			phil_States[i]=0;
-    			fork_States[i]=true;
+    			phil_States[i]=0;	//initially phils are thinking.
+    			fork_States[i]=true;	//all forks are free
     		}
     	}
-	synchronized void print_State() {
-    		System.out.println(); // newline
-    			for(int i=0;i<5;i++)
-    				System.out.print(" " + phil_States[i]);
+	void print_State() {
+		synchronized(L) {
+    				for(int i=0;i<5;i++) {	//print all phil states
+					if(phil_States[i]==0)
+    						System.out.print("think\t");
+					else if(phil_States[i]==1)
+						System.out.print("wait\t");
+					else
+						System.out.print("eat\t");
+				}
+				System.out.print("\n");
+		}
     	}
-    	synchronized void ask_to_eat(int pId) {
-    		while(!fork_States[pId] || !fork_States[(pId+1)%4])
-    		{ // while it can't have both forks, wait
-    			phil_States[pId] = 1;
-    			try {wait();} catch(InterruptedException e) {} // it gets released
-    		} // by a process doing a call to notify()
-    		phil_States[pId] = 2; // eating
-    		fork_States[pId] = false; // left fork in use
+    	void ask_to_eat(int pId) {
+		synchronized(L) {
+	    		while(!fork_States[pId] || !fork_States[(pId+1)%4]){ 	// while it can't have both forks, wait
+    				phil_States[pId] = 1;
+    				try {L.wait();} catch(InterruptedException e) {} // it gets released grabs the lock from current process
+			}
+    		} 				//by a process doing a call to notify()
+    		phil_States[pId] = 2; 		//eating because both(left,right) forks are free
+    		fork_States[pId] = false; 	//left fork in use
     		fork_States[(pId+1)%4] = false; //right fork in use
     	}
-    	synchronized void ask_to_leave(int pId) {
-    		fork_States[pId] = true; // left fork is available
-    		fork_States[(pId+1)%4] = true;	//right fork is available
-    		phil_States[pId] = 0; // thinking
-    		notify(); // free the Phil that has waited the longest
+    	void ask_to_leave(int pId) {
+		synchronized(L) {
+	    		fork_States[pId] = true; 	// left fork is available
+	    		fork_States[(pId+1)%4] = true;	//right fork is available
+	    		phil_States[pId] = 0; 		// thinking satatee
+	    		L.notify(); 			// free the Phil that has waited the longest by releasing the lock
+		}
     	}
 }
 
-class Timer implements Runnable {
-	Monitor m;
-	int completed;
-	Timer(Monitor m) { // constructor
-		this.m = m;
-		new Thread(this, "Tim").start(); // make a new thread and start it
-    		completed=0;
-    	}
-    	public void report_Stop() {
-    		completed++;
-    	}
-    	public void run() { // must override run(), this is
-    		while(completed!=5) { // what happens when the thread
-    			m.print_State(); // begins
-    			try {Thread.sleep(500);} catch(Exception e){}
-    		}
-    	}
-}
-
-class Phil implements Runnable {
-	Monitor m;
-    	Timer t;
-    	Random r = new Random(); // Random number generator object
+class Philo extends Thread
+{
+	Table m;	
     	int pId;
-    	float time;
-    	Phil(int pId, Monitor m, Timer t) { // constructor
+    	Philo(int pId, Table t) {
     		System.out.println("\n" + pId + "is started: ");
     		this.pId = pId;
-    		this.m = m;
-    		this.t = t;
-    		new Thread(this, "Phil").start(); // make a new thread and start it
+    		this.m = t;	//shared object table
 	}
-    	public void run() { // must override run, this is what
-    		for(int i=0; i<20; i++) { // is executed when the thread starts
-    			m.ask_to_eat(pId); // running
-    			time = 1000*r.nextFloat();
-    			try {Thread.sleep((int)time);} catch(Exception e){}
-    			m.ask_to_leave(pId);
-    			time = 1000*r.nextFloat();
-    			try {Thread.sleep((int)time);} catch(Exception e){}
+    	public void run() { 	//overriding the run()	
+		while(true) {	//philosophers doing these acivites infinitly 
+			
+    			m.ask_to_eat(pId);
+    			try {Thread.sleep(500);} catch(Exception e){}	//5milli seconds to eat
+			m.print_State();
+    			try {Thread.sleep(500);} catch(Exception e){}	//5ms to print the state
+			m.ask_to_leave(pId);
+    			try {Thread.sleep(500);} catch(Exception e){}	//5milli second to leave the fork
+			m.print_State();
+    			try {Thread.sleep(500);} catch(Exception e){}	//5ms to print the state
+			
     		}
-    		t.report_Stop(); // tell the timer this one is done
     	}
 }
 
-class Diners {
-	public static void main(String args[]) { // execution of the whole
-    		Monitor m = new Monitor(); // thing begins here
-    		Timer t = new Timer(m); // make a new timer
-    		Phil p[] = new Phil[5]; // make an array of 5 refs to Phils
-    		for(int i=0; i<5; i++)
-    			p[i] = new Phil(i,m,t); // create the phils and start them
-    	}
+class DiningPhilosophers
+{
+	public static void main(String[] args)
+	{
+		int i;
+		Table t  = new Table();		//one table object is given to 5 philosophers
+		Philo p[]= new Philo[5]; 	// make an array of 5 refs to Phils
+    		for(i=0; i<5; i++)
+    			p[i] = new Philo(i,t);
+		for(i=0;i<5;i++)
+			p[i].start();
+	}
 }
